@@ -1,5 +1,5 @@
 ###########
-tools-image
+devsecops pipeline script and security tools image
 ###########
 
 This repository contains all files necessary to build a Docker image, containing
@@ -11,11 +11,6 @@ Python libraries.
 
 The accompanying ``Jenkinsfile`` can be used to automatically build, test and
 push the image using the build and automation server Jenkins.
-
-A prebuilt Docker image can be found on
-https://hub.docker.com/repository/docker/gofwd/tools-image and downloaded from
-docker.io using the tag ``gofwd/tools-image``
-
 
 The following tools are available:
 
