@@ -1,0 +1,57 @@
+// This pipeline revolves around building a Docker image:
+// - Lint: Lints a Dockerfile using hadolint
+// - Build and test: Builds and tests a Docker image
+// - Push: Pushes the image to the registry
+
+pipeline {
+    environment { // Environment variables defined for all steps
+        TOOLS_IMAGE = "127.0.0.1:5000/tools-image"
+    }
+
+    agent any
+
+    stages {
+        stage("lint") {
+            agent {
+                docker {
+                    image "docker.io/hadolint/hadolint:v1.18.0"
+                    reuseNode true
+                }
+            }
+            steps {
+                sh label: "Lint Dockerfile", script: "hadolint Dockerfile > hadolint-results.txt"
+            }
+        }
+
+        stage("detect new secrets") {
+            agent {
+                docker {
+                    image "${TOOLS_IMAGE}"
+                    args "--volume /etc/passwd:/etc/passwd:ro"
+                    reuseNode true
+                }
+            }
+            steps {
+                script {
+                    def result = sh label: "detect-secrets",
+                        script: """\
+                            detect-secrets-hook --no-verify \
+                                                -v \
+                                                --baseline .secrets.baseline.json \
+                            \$(git diff-tree --no-commit-id --name-only -r ${GIT_COMMIT} | xargs -n1)
+                        """,
+                        returnStatus: true
+                        
+                        if (result == 1) {
+                            error("unaudited secrets have been found")
+                        }
+                }
+            }
+        }
+   }
+   post {
+        always {
+             archiveArtifacts artifacts: "*-results.txt"
+        }
+   }
+}
