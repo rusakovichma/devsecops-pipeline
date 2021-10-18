@@ -1,11 +1,12 @@
 // This pipeline revolves around building a Docker image:
 // - Lint: Lints a Dockerfile using hadolint
-// - Build and test: Builds and tests a Docker image
-// - Push: Pushes the image to the registry
+// - detect new secrets: Detect new secrets
+// - sonar scanner: Scan source code for vulnerabilities
 
 pipeline {
     environment { // Environment variables defined for all steps
         TOOLS_IMAGE = "127.0.0.1:5000/tools-image"
+	SONAR_KEY = "juice-shop"
     }
 
     agent any
@@ -48,6 +49,36 @@ pipeline {
                 }
             }
         }
+
+       stage("sonnarscanner") {
+           agent {
+               docker {
+                   image "${TOOLS_IMAGE}"
+                   // Make sure that username can be mapped correctly
+                   args "--volume /etc/passwd:/etc/passwd:ro --network lab"
+                   reuseNode true
+               }
+           }
+           steps {
+               withSonarQubeEnv("sonarqube.demo.local") {
+                 withEnv(['npm_config_cache=npm-cache', 'HOME=.']){
+                   sh label: "clear npm cache",
+                      script: "npm  cache clear --force"
+                   sh label: "install prerequisites",
+                      script: "npm install -D typescript"
+                   sh label: "sonar-scanner",
+                      script: """\
+                          sonar-scanner \
+                          '-Dsonar.buildString=${BRANCH_NAME}-${BUILD_ID}' \
+                          '-Dsonar.projectKey=${SONAR_KEY}' \
+                          '-Dsonar.projectVersion=${BUILD_ID}' \
+                          '-Dsonar.sources=${WORKSPACE}'
+                      """
+                 }
+               }
+           }
+       }
+
    }
    post {
         always {
