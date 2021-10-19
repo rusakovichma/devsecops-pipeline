@@ -73,24 +73,72 @@ pipeline {
                           '-Dsonar.projectKey=${SONAR_KEY}' \
                           '-Dsonar.projectVersion=${BUILD_ID}' \
                           '-Dsonar.sources=${WORKSPACE}'
-                      """
+                      """  
                  }
                }
            }
        }
        
-     stage("quality gate"){
+     stage("quality gate") {
        steps {
          timeout(time: 1, unit: 'HOURS') {
            waitForQualityGate abortPipeline: true
          }
        }
      }
+  
+// - Deprecated variant  
+/*
+    stage("quality gate") {
+      steps {
+        script {
+          withSonarQubeEnv("sonarqube.demo.local") {
+              def scannerWorkReportTask = getWorkspaceFileProperties("${env.WORKSPACE}/.scannerwork/report-task.txt")
+              def sonarServerUrl = scannerWorkReportTask.getProperty('serverUrl')              
+            
+              def ceTask
+              timeout(time: 2, unit: 'MINUTES') {
+                 waitUntil {
+                    withCredentials([string(credentialsId: 'SONAR_AUTH_TOKEN', variable: 'AUTH_TOKEN')]) {
+                       ceTask = parseResponseFromUrl(sonarServerUrl + "/api/ce/task?id=" + scannerWorkReportTask.getProperty('ceTaskId'), "${AUTH_TOKEN}")
+                    }
+                 return "SUCCESS".equals(ceTask["task"]["status"])
+                 }
+              } 
 
+             def qualityGateAnalysisUrl = sonarServerUrl + "/api/qualitygates/project_status?analysisId=" + ceTask["task"]["analysisId"]
+             def qualityGateResp
+
+             withCredentials([string(credentialsId: 'SONAR_AUTH_TOKEN', variable: 'AUTH_TOKEN')]) {
+                 qualityGateResp = parseResponseFromUrl(qualityGateAnalysisUrl, "${AUTH_TOKEN}")
+             }
+
+             if ("ERROR".equals(qualityGateResp["projectStatus"]["status"])) {
+                error "Quality Gate failure"
+             }
+           
+         }
+       } 
+     }
+    }
+*/
    }
    post {
         always {
              archiveArtifacts artifacts: "*-results.txt"
         }
    }
+}
+
+def Properties getWorkspaceFileProperties(filename) {
+    def properties = new Properties()
+    properties.load(new StringReader(readFile(filename)))
+    return properties
+}
+
+@NonCPS
+def parseResponseFromUrl(String url, String authToken) {
+    def response  = sh(script: "curl -u ${authToken}: ${url}", returnStdout: true) 
+    def parsedResponse = new groovy.json.JsonSlurperClassic().parseText(response)
+    return parsedResponse
 }
