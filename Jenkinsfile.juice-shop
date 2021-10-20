@@ -2,6 +2,7 @@
 // - Lint: Lints a Dockerfile using hadolint
 // - detect new secrets: Detect new secrets
 // - sonar scanner: Scan source code for vulnerabilities
+// - dependency check: Test for insecure third party libraries
 
 pipeline {
     environment { // Environment variables defined for all steps
@@ -80,6 +81,12 @@ pipeline {
        }
        
      stage("quality gate") {
+       when {
+         anyOf {
+           changeRequest()
+           branch 'master'
+         }
+       }
        steps {
          timeout(time: 1, unit: 'HOURS') {
            waitForQualityGate abortPipeline: true
@@ -122,6 +129,37 @@ pipeline {
      }
     }
 */
+    stage("dependency check") {
+        agent {
+            docker {
+                image "owasp/dependency-check:6.4.1"
+                args '''\
+                    --user 0 \
+                    --volume dependency-check:/usr/share/dependency-check/data:rw \
+                    --volume ${WORKSPACE}:/src:ro \
+                    --volume ${WORKSPACE}/reports:/reports:rw \
+                    --entrypoint ""
+                '''
+                reuseNode true 
+            }
+        }
+        steps {
+             script {
+                 def result = sh label: "dependency-check", returnStatus: true,
+                     script: """\
+                        mkdir -p reports &>/dev/null
+                        /usr/share/dependency-check/bin/dependency-check.sh \
+                        --failOnCVSS 10 \
+                        --out "${WORKSPACE}/reports" \
+                        --project "${JOB_BASE_NAME}" \
+                        --scan "/src"
+                     """
+                 if (result > 0) {
+                      error("Insecure libraries found")
+                 } 
+             }
+        }
+    }
    }
    post {
         always {
