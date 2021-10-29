@@ -3,10 +3,13 @@
 // - detect new secrets: Detect new secrets
 // - sonar scanner: Scan source code for vulnerabilities
 // - dependency check: Test for insecure third party libraries
+// - anchore-engine: docker images scanning
 
 pipeline {
     environment { // Environment variables defined for all steps
         TOOLS_IMAGE = "127.0.0.1:5000/tools-image"
+        DOCKER_IMAGE = "127.0.0.1:5000/juice-shop"
+        DOCKER_IMAGE_LAB_NET = "registry.demo.local:5000/juice-shop"
 	SONAR_KEY = "juice-shop"
     }
 
@@ -158,6 +161,69 @@ pipeline {
                       error("Insecure libraries found")
                  } 
              }
+        }
+    }
+   
+    stage("Build image") {
+        steps {
+            script {
+                // Use commit tag if it has been tagged
+                tag = sh(returnStdout: true, script: "git tag --contains").trim()
+                if ("$tag" == "") {
+                    if ("${BRANCH_NAME}" == "master") {
+                        tag = "latest"
+                    } else {
+                        tag = "${BRANCH_NAME}"
+                    }
+                }
+                image = docker.build("$DOCKER_IMAGE:$tag")
+            }
+        }
+    }
+
+    stage("Push to registry"){
+        steps {
+	    script {
+                sh label: "Push to registry", script: "docker push ${DOCKER_IMAGE}:$tag"
+            }
+        }
+    }
+
+    stage("Scan container") {
+        agent {
+            docker {
+                image "$TOOLS_IMAGE"
+                //Make sure that container can access anchore-engine_api_1
+                args "--network=lab --volume ${WORKSPACE}/anchore-policy:/anchore-policy:ro"
+                reuseNode true
+            }
+        }
+        steps {
+            // Continue the build, even after policy failure
+            script {
+                 sh label: "Ensure anchore is available",
+                     script: "anchore-cli system status"
+                 sh label: "Add policy to Anchore engine",
+                     script: "anchore-cli policy add /anchore-policy/policybundle.json"
+                 def policyId = sh (
+                     script: "anchore-cli policy list | awk 'NR==2{print \$1}'",
+                     returnStdout: true
+                 ).trim()
+                 sh label: "Activate the policy",
+                     script: "anchore-cli policy activate ${policyId}"
+                 sh label: "Add to queue",
+                     script: "anchore-cli image add ${DOCKER_IMAGE_LAB_NET}:$tag"
+                 sh label: "Wait for analysis",
+                     script: "anchore-cli image wait ${DOCKER_IMAGE_LAB_NET}:$tag"
+                 sh label: "Generate list of vulnerabilities",
+                     script: "anchore-cli image vuln $DOCKER_IMAGE_LAB_NET:$tag all | tee anchore-results.txt"
+                 def result = sh label: "Check policy",
+                     script: "anchore-cli evaluate check ${DOCKER_IMAGE_LAB_NET}:$tag --detail >> anchore-results.txt"
+
+                 if (result > 0) {
+                      error("Policy check failed")
+                 }
+            }
         }
     }
    }

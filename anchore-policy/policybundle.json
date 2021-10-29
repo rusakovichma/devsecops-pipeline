@@ -1,0 +1,280 @@
+{
+    "blacklisted_images": [],
+    "comment": "Default bundle",
+    "id": "2c53a13c-1765-11e8-82ef-23527761d060",
+    "mappings": [
+        {
+            "id": "c4f9bf74-dc38-4ddf-b5cf-00e9c0074611",
+            "image": {
+                "type": "tag",
+                "value": "*"
+            },
+            "name": "default",
+            "policy_id": "48e6f7d6-1765-11e8-b5f9-8b6f228548b6",
+            "registry": "*",
+            "repository": "*",
+            "whitelist_ids": [
+                "37fd763e-1765-11e8-add4-3b16c029ac5c"
+            ]
+        }
+    ],
+    "name": "Default bundle",
+    "policies": [
+        {
+            "comment": "System default policy",
+            "id": "48e6f7d6-1765-11e8-b5f9-8b6f228548b6",
+            "name": "DefaultPolicy",
+            "rules": [
+                {
+                    "action": "STOP",
+                    "gate": "dockerfile",
+                    "id": "ce7b8000-829b-4c27-8122-69cd59018400",
+                    "params": [
+                        {
+                            "name": "ports",
+                            "value": "22"
+                        },
+                        {
+                            "name": "type",
+                            "value": "blacklist"
+                        }
+                    ],
+                    "trigger": "exposed_ports"
+                },
+                {
+                    "action": "WARN",
+                    "gate": "dockerfile",
+                    "id": "312d9e41-1c05-4e2f-ad89-b7d34b0855bb",
+                    "params": [
+                        {
+                            "name": "instruction",
+                            "value": "HEALTHCHECK"
+                        },
+                        {
+                            "name": "check",
+                            "value": "not_exists"
+                        }
+                    ],
+                    "trigger": "instruction"
+                },
+                {
+                    "action": "WARN",
+                    "gate": "vulnerabilities",
+                    "id": "6b5c14e7-a6f7-48cc-99d2-959273a2c6fa",
+                    "params": [
+                        {
+                            "name": "max_days_since_sync",
+                            "value": "2"
+                        }
+                    ],
+                    "trigger": "stale_feed_data"
+                },
+                {
+                    "action": "WARN",
+                    "gate": "vulnerabilities",
+                    "id": "3e79ea94-18c4-4d26-9e29-3b9172a62c2e",
+                    "params": [],
+                    "trigger": "vulnerability_data_unavailable"
+                },
+                {
+                    "action": "WARN",
+                    "gate": "vulnerabilities",
+                    "id": "6063fdde-b1c5-46af-973a-915739451ac4",
+                    "params": [
+                        {
+                            "name": "package_type",
+                            "value": "all"
+                        },
+                        {
+                            "name": "severity_comparison",
+                            "value": "="
+                        },
+                        {
+                            "name": "severity",
+                            "value": "medium"
+                        }
+                    ],
+                    "trigger": "package"
+                },
+                {
+                    "action": "STOP",
+                    "gate": "vulnerabilities",
+                    "id": "b30e8abc-444f-45b1-8a37-55be1b8c8bb5",
+                    "params": [
+                        {
+                            "name": "package_type",
+                            "value": "all"
+                        },
+                        {
+                            "name": "severity_comparison",
+                            "value": ">"
+                        },
+                        {
+                            "name": "severity",
+                            "value": "medium"
+                        }
+                    ],
+                    "trigger": "package"
+                }
+            ],
+            "version": "1_0"
+        }
+    ],
+    "version": "1_0",
+    "whitelisted_images": [],
+    "whitelists": [
+        {
+            "comment": "Default global whitelist",
+            "id": "37fd763e-1765-11e8-add4-3b16c029ac5c",
+            "items": [
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2015-9235+*",
+                            "id": "rule1"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2017-16042+*",
+                            "id": "rule2"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2019-10744+*",
+                            "id": "rule3"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2020-15084+*",
+                            "id": "rule4"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-23449+*",
+                            "id": "rule5"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-41720+*",
+                            "id": "rule6"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2017-18214+*",
+                            "id": "rule7"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2017-18589+*",
+                            "id": "rule8"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2020-28469+*",
+                            "id": "rule9"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2020-8203+*",
+                            "id": "rule10"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-23337+*",
+                            "id": "rule11"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-23343+*",
+                            "id": "rule12"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-33623+*",
+                            "id": "rule13"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-37701+*",
+                            "id": "rule14"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-37712+*",
+                            "id": "rule15"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-37713+*",
+                            "id": "rule16"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-3807+*",
+                            "id": "rule17"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2016-1000237+*",
+                            "id": "rule18"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2017-16016+*",
+                            "id": "rule19"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2018-16487+*",
+                            "id": "rule20"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2018-3721+*",
+                            "id": "rule21"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2019-1010266+*",
+                            "id": "rule22"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2020-28500+*",
+                            "id": "rule23"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-23364+*",
+                            "id": "rule24"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-23368+*",
+                            "id": "rule25"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-23382+*",
+                            "id": "rule26"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-26539+*",
+                            "id": "rule27"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-26540+*",
+                            "id": "rule28"
+                    },
+                    {
+                            "gate": "vulnerabilities",
+                            "trigger_id": "CVE-2021-27815+*",
+                            "id": "rule29"
+                    }
+            ],
+            "name": "Global Whitelist",
+            "version": "1_0"
+        }
+    ]
+}
