@@ -226,10 +226,67 @@ pipeline {
             }
         }
     }
+
+    stage("Launch sidecar") {
+        steps {
+            sh label: "Start sidecar container",
+                script: """\
+                    docker run --detach \
+                               --network lab \
+                               --name ${JOB_BASE_NAME}-${BUILD_ID}  \
+                               --rm \
+                               ${DOCKER_IMAGE_LAB_NET}:${tag}
+               """
+        }
+    }
+
+    stage("nikto") {
+        agent {
+            docker {
+                image "$TOOLS_IMAGE"
+                args "--network=lab"
+                reuseNode true 
+            }
+        }
+        steps {
+            script {
+                def result = sh label: "nikto", returnStatus: true,
+                    script: """\
+                        mkdir -p reports &>/dev/null
+                        curl --max-time 120 \
+                            --retry 60 \
+                            --retry-connrefused \
+                            --retry-delay 5 \
+                            --fail \
+                            --silent http://${JOB_BASE_NAME}-${BUILD_ID}:3000 || exit 1
+                        nikto.pl -ask no \
+                            -nointeractive
+                            -Plugins '@@ALL;-sitefiles' \
+                            -output reports/nikto.html \
+                            -host http://${JOB_BASE_NAME}-${BUILD_ID}:3000 > nikto.pl-results.txt
+                    """
+
+               if (result > 0) {
+                   error("Web server scanner issues found")
+               }
+            }
+        }
+    }
    }
    post {
         always {
+             sh label: "Stop sidecar container", script: "docker stop ${JOB_BASE_NAME}-${BUILD_ID}"
+
              archiveArtifacts artifacts: "*-results.txt"
+
+             publishHTML([
+                 allowMissing: true,
+                 alwaysLinkToLastBuild: true,
+                 keepAll: true,
+                 reportDir: "reports",
+                 reportFiles: "nikto.html",
+                 reportName: "Nikto.pl scanreport"
+             ])
         }
    }
 }
