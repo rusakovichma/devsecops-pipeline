@@ -1,0 +1,60 @@
+import groovy.json.JsonSlurperClassic
+ 
+def toRelativePathInModule(File current, File startingPoint, File workingDir) {
+  if (current == null) return null
+  if (current.isDirectory()) {
+    def sonarFile = current.listFiles().find { it.getName() == 'sonar-project.properties' || it.getName() == 'pom.xml' }
+    if (sonarFile) {
+      return sonarFile.getParentFile().toURI().relativize(startingPoint.toURI()).getPath()
+    } else if (current == workingDir) {
+      return workingDir.toURI().relativize(startingPoint.toURI()).getPath()
+    }
+  }
+  return toRelativePathInModule(current.getParentFile(), startingPoint, workingDir)
+}
+ 
+if (!env.PULL_REQUEST_ID) {
+  error("PULL_REQUEST_ID not set")
+}
+def pullRequestId = env.PULL_REQUEST_ID
+//TODO change variables here!
+def bitbucketServer = "http://localhost:7990/bitbucket"
+def projectKey = "PROJECT_1"
+def repoSlug = "maven-sub-modules"
+def pullRequestDiffUrl = new URL(
+  "$bitbucketServer/rest/api/1.0/projects/$projectKey/repos/$repoSlug/pull-requests/$pullRequestId/changes?limit=9999"
+)
+//use either personal access token (available since Bitbucket 5.5.0) or basic auth
+//TODO use personal access token:
+def personalAccessToken = "XXX" // can be created under Bitbucket user -> manage account -> personal access token
+def withPersonalAccessToken = ["Authorization": "Bearer $personalAccessToken"]
+//TODO or use basic authentication
+//def authString = "admin:admin".getBytes().encodeBase64().toString()
+//def withBasicAuth = ["Authorization": "Basic ${authString}"]
+def pullRequestDiff = new JsonSlurperClassic().parse(pullRequestDiffUrl.newReader(requestProperties: withPersonalAccessToken)).values
+ 
+node {
+  def workspace = env.WORKSPACE
+  def files = pullRequestDiff.collect {
+    toRelativePathInModule(new File(workspace, it.path.toString), new File(workspace, it.path.toString), new File(workspace))
+  }.join(",")
+ 
+  stage('SCM') {
+    git url: 'http://admin@localhost:7990/bitbucket/scm/project_1/maven-sub-modules.git'
+  }
+ 
+  stage('SonarQube analysis') {
+    withSonarQubeEnv('sonar') {
+      sh "mvn clean package sonar:sonar -Dsonar.inclusions=$files"
+    }
+  }
+ 
+  stage("Quality Gate"){
+    timeout(time: 30, unit: 'MINUTES') {
+      def qg = waitForQualityGate()
+      if (qg.status != 'OK') {
+        error "Pipeline aborted due to quality gate failure: ${qg.status}"
+      }
+    }
+  }
+}
