@@ -20,3 +20,12 @@ The following tools are available:
 + nikto.pl
 + testssl.sh
 + trufflehog
+
+To start the services execute:
+$ docker-compose up -d
+
+Allow Jenkins to start containers:
+$ sermod -aG docker jenkins
+$ usermod -aG root jenkins
+$ chmod 664 /var/run/docker.sock
+
